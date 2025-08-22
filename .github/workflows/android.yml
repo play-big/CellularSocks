@@ -24,6 +24,18 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       
+      - name: Setup Gradle wrapper
+        run: |
+          # Create gradle wrapper if missing
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Gradle wrapper jar not found, downloading..."
+            mkdir -p gradle/wrapper
+            curl -L https://services.gradle.org/distributions/gradle-8.5-bin.zip -o gradle-8.5-bin.zip
+            unzip gradle-8.5-bin.zip
+            cp gradle-8.5/lib/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
+            rm -rf gradle-8.5 gradle-8.5-bin.zip
+          fi
+      
       - name: Run tests
         run: ./gradlew test
       
