@@ -1,0 +1,1727 @@
+# CellularSocks — 进阶版（无 Root | SOCKS5 出口强制走蜂窝）
+
+> Kotlin + Compose + 前台服务 + 蜂窝 Network 绑定 + 账号密码鉴权 + 日志面板 + GitHub Actions
+
+---
+
+## README.md（项目说明）
+```markdown
+# CellularSocks
+
+一个 Android SOCKS5 代理应用，监听 Wi-Fi 局域网地址，但所有外连强制走蜂窝网络（无需 Root）。
+
+## 功能特性
+
+- **SOCKS5 协议支持**：完整的 SOCKS5 实现，支持 CONNECT 和 UDP ASSOCIATE
+- **蜂窝网络绑定**：通过 Android Network API 强制外连走移动数据
+- **用户认证**：可选的用户名/密码鉴权
+- **访问控制**：IP 白名单/黑名单，防暴力破解
+- **服务发现**：NSD/mDNS 广播，局域网设备可自动发现
+- **持久化设置**：端口、鉴权等配置自动保存
+- **实时统计**：连接数、传输量等运行状态
+- **前台服务**：常驻后台，支持通知控制
+
+## 技术栈
+
+- **语言**：Kotlin
+- **UI**：Jetpack Compose
+- **网络**：Android Network API + SOCKS5
+- **存储**：DataStore
+- **测试**：JUnit + Mockito + Coroutines Test
+
+## 使用步骤
+
+1. **安装应用**：下载并安装 APK
+2. **授权通知**：首次启动时允许通知权限
+3. **确认网络**：确保手机连接 Wi-Fi 且蜂窝数据已开启
+4. **启动代理**：设置端口（可选鉴权）→ 点击【启动代理】
+5. **配置客户端**：局域网设备设置 SOCKS5 代理为手机 Wi-Fi IP + 端口
+6. **验证连接**：观察日志中的"转发 ...（蜂窝）"信息
+
+## 开发环境
+
+- Android Studio Hedgehog | 2023.1.1
+- JDK 17
+- Android SDK 34
+- Gradle 8.5
+
+## 构建
+
+```bash
+# 克隆项目
+git clone https://github.com/your-username/CellularSocks.git
+cd CellularSocks
+
+# 构建 Debug 版本
+./gradlew assembleDebug
+
+# 构建 Release 版本
+./gradlew assembleRelease
+
+# 运行测试
+./gradlew test
+
+# 代码检查
+./gradlew lintDebug
+```
+
+## 项目结构
+
+```
+CellularSocks/
+├── app/
+│   ├── src/main/
+│   │   ├── java/com/example/cellularsocks/
+│   │   │   ├── MainActivity.kt              # Compose UI
+│   │   │   ├── service/
+│   │   │   │   ├── ProxyForegroundService.kt # 前台服务
+│   │   │   │   └── CellularBinder.kt        # 蜂窝网络绑定
+│   │   │   ├── core/
+│   │   │   │   ├── Socks5Server.kt          # SOCKS5 服务器
+│   │   │   │   ├── Socks5Session.kt         # 会话处理
+│   │   │   │   ├── UdpAssociate.kt          # UDP 中继
+│   │   │   │   └── Pump.kt                  # 数据泵
+│   │   │   └── util/
+│   │   │       ├── Settings.kt              # 设置持久化
+│   │   │       ├── NetUtils.kt              # 网络工具
+│   │   │       ├── LogBus.kt                # 日志总线
+│   │   │       ├── Nsd.kt                   # 服务发现
+│   │   │       └── IpAcl.kt                 # IP 访问控制
+│   │   └── res/                             # 资源文件
+│   └── src/test/                            # 单元测试
+├── gradle/                                  # Gradle Wrapper
+├── .github/workflows/                       # CI/CD
+└── README.md
+```
+
+## 配置说明
+
+### 网络要求
+
+- Android 8.0+ (API 26+)
+- 开发者选项中开启"移动数据始终保持活动"
+- Wi-Fi 与蜂窝数据同时开启
+
+### 权限说明
+
+- `INTERNET`：网络访问
+- `ACCESS_NETWORK_STATE`：网络状态检查
+- `ACCESS_WIFI_STATE`：Wi-Fi 状态检查
+- `WAKE_LOCK`：保持网络活跃
+- `POST_NOTIFICATIONS`：前台服务通知
+- `FOREGROUND_SERVICE`：前台服务
+
+## 开发指南
+
+### 添加新功能
+
+1. 在对应包下创建新类
+2. 添加单元测试
+3. 更新 README 文档
+4. 提交 Pull Request
+
+### 测试
+
+```bash
+# 运行所有测试
+./gradlew test
+
+# 运行特定测试类
+./gradlew test --tests Socks5SessionTest
+
+# 生成测试报告
+./gradlew test jacocoTestReport
+```
+
+### 代码规范
+
+- 使用 Kotlin 编码规范
+- 函数和变量使用驼峰命名
+- 类名使用 PascalCase
+- 常量使用 UPPER_SNAKE_CASE
+
+## 许可证
+
+Apache License 2.0
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 更新日志
+
+### v0.1.0
+- 初始版本
+- 基础 SOCKS5 功能
+- 蜂窝网络绑定
+- 用户认证
+- 访问控制
+- 服务发现
+- 持久化设置
+- 实时统计
+```
+
+---
+
+## 目录结构
+```
+CellularSocks/
+ ├─ settings.gradle.kts
+ ├─ build.gradle.kts                 # Project
+ └─ app/
+    ├─ build.gradle.kts              # Module
+    ├─ src/main/
+    │  ├─ AndroidManifest.xml
+    │  ├─ res/
+    │  │  ├─ drawable/ic_stat_proxy.xml
+    │  │  └─ values/strings.xml
+    │  └─ java/com/example/cellularsocks/
+    │     ├─ MainActivity.kt
+    │     ├─ ui/Theme.kt
+    │     ├─ service/ProxyForegroundService.kt
+    │     ├─ service/CellularBinder.kt
+    │     ├─ core/Socks5Server.kt
+    │     ├─ core/Socks5Session.kt
+    │     ├─ core/Pump.kt
+    │     ├─ core/UdpAssociate.kt
+    │     ├─ util/NetUtils.kt
+    │     └─ util/LogBus.kt
+    └─ src/debug/AndroidManifest.xml (可选)
+```
+
+---
+
+## settings.gradle.kts
+```kotlin
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "CellularSocks"
+include(":app")
+```
+
+## build.gradle.kts（Project）
+```kotlin
+plugins {
+    id("com.android.application") version "8.5.2" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+}
+```
+
+## app/build.gradle.kts（Module）
+```kotlin
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.example.cellularsocks"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.example.cellularsocks"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 1
+        versionName = "0.1.0"
+    }
+
+    buildFeatures { compose = true }
+    composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
+
+    packaging {
+        resources.excludes.add("META-INF/{AL2.0,LGPL2.1}")
+    }
+}
+
+dependencies {
+    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3:1.3.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.jakewharton.timber:timber:5.0.1")
+    // DataStore for settings persistence
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.8.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+}
+```
+
+---
+
+## src/main/AndroidManifest.xml
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application
+        android:allowBackup="true"
+        android:label="CellularSocks"
+        android:icon="@drawable/ic_stat_proxy"
+        android:usesCleartextTraffic="true"
+        android:supportsRtl="true">
+
+        <activity android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".service.ProxyForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+    </application>
+</manifest>
+```
+
+---
+
+## res/drawable/ic_stat_proxy.xml（简易矢量图标）
+```xml
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#000000"
+        android:pathData="M3,12a9,9 0 1,0 18,0a9,9 0 1,0 -18,0z" android:fillAlpha="0.12"/>
+    <path android:fillColor="#000000"
+        android:pathData="M7,12h10M12,7v10"/>
+</vector>
+```
+
+## res/values/strings.xml
+```xml
+<resources>
+    <string name="app_name">CellularSocks</string>
+    <string name="notif_channel">Cellular Proxy</string>
+    <string name="notif_title">Cellular SOCKS</string>
+</resources>
+```
+
+---
+
+## MainActivity.kt（Compose UI + 动态权限 + 服务控制 + 日志）
+```kotlin
+package com.example.cellularsocks
+
+import android.Manifest
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.content.pm.PackageManager
+import android.net.InetAddresses
+import android.os.Build
+import android.os.Bundle
+import android.os.IBinder
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.example.cellularsocks.service.ProxyForegroundService
+import com.example.cellularsocks.ui.AppTheme
+import com.example.cellularsocks.util.LogBus
+import com.example.cellularsocks.util.NetUtils
+import com.example.cellularsocks.util.Settings
+import com.example.cellularsocks.util.SettingsRepo
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+
+class MainActivity : ComponentActivity() {
+
+    private var boundService: ProxyForegroundService? = null
+
+    private val conn = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            boundService = (service as ProxyForegroundService.LocalBinder).getService()
+        }
+        override fun onServiceDisconnected(name: ComponentName?) { boundService = null }
+    }
+
+    private val notifPermLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED) {
+            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        val intent = Intent(this, ProxyForegroundService::class.java)
+        ContextCompat.startForegroundService(this, intent)
+        bindService(intent, conn, Context.BIND_AUTO_CREATE)
+
+        setContent { AppTheme { AppScreen() } }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unbindService(conn)
+    }
+
+    @Composable
+    private fun AppScreen() {
+        val ctx = this
+        val scope = rememberCoroutineScope()
+
+        // 从 DataStore 恢复设置
+        val settings by SettingsRepo.flow(ctx).collectAsState(initial = Settings())
+
+        var portText by remember(settings.port) { mutableStateOf(settings.port.toString()) }
+        var username by remember(settings.username) { mutableStateOf(settings.username) }
+        var password by remember(settings.password) { mutableStateOf(settings.password) }
+        var authEnabled by remember(settings.authEnabled) { mutableStateOf(settings.authEnabled) }
+        var running by remember { mutableStateOf(false) }
+        var ip by remember { mutableStateOf(NetUtils.wifiIpv4(ctx) ?: "0.0.0.0") }
+        val logs = remember { mutableStateListOf<String>() }
+
+        // 订阅日志
+        LaunchedEffect(Unit) {
+            LogBus.flow.collectLatest { msg ->
+                logs.add(0, msg)
+                if (logs.size > 200) logs.removeLast()
+            }
+        }
+
+        // 订阅统计（当服务已绑定并启动时）
+        val statsFlow = boundService?.statsFlow
+        val stats = statsFlow?.collectAsState(initial = null)?.value
+
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("局域网监听地址（Wi‑Fi）", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(ip, modifier = Modifier.weight(1f))
+                    Button(onClick = { ip = NetUtils.wifiIpv4(ctx) ?: "0.0.0.0" }) { Text("刷新") }
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(value = portText, onValueChange = {
+                    val v = it.filter { c -> c.isDigit() }.take(5)
+                    portText = v
+                    v.toIntOrNull()?.let { p ->
+                        scope.launch { SettingsRepo.update(ctx) { s -> s.copy(port = p) } }
+                    }
+                }, label = { Text("端口") })
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(checked = authEnabled, onCheckedChange = {
+                        authEnabled = it
+                        scope.launch { SettingsRepo.update(ctx) { s -> s.copy(authEnabled = it) } }
+                    })
+                    Spacer(Modifier.width(8.dp))
+                    Text("启用账号密码鉴权")
+                }
+                if (authEnabled) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(value = username, onValueChange = {
+                        username = it; scope.launch { SettingsRepo.update(ctx) { s -> s.copy(username = it) } }
+                    }, label = { Text("用户名") })
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(value = password, onValueChange = {
+                        password = it; scope.launch { SettingsRepo.update(ctx) { s -> s.copy(password = it) } }
+                    }, label = { Text("密码") }, visualTransformation = PasswordVisualTransformation())
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(enabled = !running, onClick = {
+                        val p = portText.toIntOrNull()
+                        if (p == null || p !in 1..65535) {
+                            Toast.makeText(ctx, "端口无效", Toast.LENGTH_SHORT).show(); return@Button
+                        }
+                        val ok = boundService?.startProxy(ip, p,
+                            if (authEnabled) ProxyForegroundService.Auth(username, password) else null
+                        ) ?: false
+                        running = ok
+                        if (!ok) Toast.makeText(ctx, "启动失败，检查蜂窝网络是否激活", Toast.LENGTH_LONG).show()
+                    }) { Text("启动代理") }
+
+                    OutlinedButton(enabled = running, onClick = {
+                        boundService?.stopProxy(); running = false
+                    }) { Text("停止") }
+                }
+                Spacer(Modifier.height(12.dp))
+                if (running && stats != null) {
+                    Text("运行中：会话 ${stats.activeSessions}，累计 ${stats.totalSessions}，传输 ${formatBytes(stats.totalBytes)}")
+                    Spacer(Modifier.height(8.dp))
+                }
+                Divider()
+                Spacer(Modifier.height(8.dp))
+                Text("日志", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(logs) { line -> Text(line) }
+                }
+            }
+        }
+    }
+}
+
+private fun formatBytes(b: Long): String {
+    if (b < 1024) return "$b B"
+    val kb = b / 1024.0
+    if (kb < 1024) return String.format("%.1f KB", kb)
+    val mb = kb / 1024.0
+    if (mb < 1024) return String.format("%.1f MB", mb)
+    val gb = mb / 1024.0
+    return String.format("%.1f GB", gb)
+}
+```
+
+---
+
+## ui/Theme.kt（简易主题）
+```kotlin
+package com.example.cellularsocks.ui
+
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+
+@Composable
+fun AppTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val light = lightColorScheme()
+    val darkScheme = darkColorScheme()
+    MaterialTheme(colorScheme = if (dark) darkScheme else light, content = content)
+}
+```
+
+---
+
+## service/CellularBinder.kt（申请并保持蜂窝 Network）
+```kotlin
+package com.example.cellularsocks.service
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.util.Log
+import kotlinx.coroutines.*
+import javax.net.SocketFactory
+import java.net.DatagramSocket
+
+class CellularBinder(context: Context) {
+    private val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    @Volatile var cellularNetwork: Network? = null
+        private set
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val callback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            cellularNetwork = network
+            Log.i(TAG, "CELLULAR available: $network")
+        }
+        override fun onLost(network: Network) {
+            if (cellularNetwork == network) cellularNetwork = null
+            Log.w(TAG, "CELLULAR lost; re-requesting…")
+            // 自动重试请求蜂窝网络
+            scope.launch { delay(500); safeRequestCellular(INITIAL_TIMEOUT_MS) }
+        }
+    }
+
+    fun requestCellular(timeoutMs: Long = INITIAL_TIMEOUT_MS) {
+        safeRequestCellular(timeoutMs)
+    }
+
+    private fun safeRequestCellular(timeoutMs: Long) {
+        val req = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        try {
+            cm.requestNetwork(req, callback, timeoutMs.toInt())
+        } catch (e: Exception) {
+            Log.e(TAG, "requestNetwork failed: ${e.message}")
+        }
+    }
+
+    fun isAvailable(): Boolean = cellularNetwork != null
+
+    fun bindDatagram(socket: DatagramSocket): Boolean {
+        val n = cellularNetwork ?: return false
+        return try { n.bindSocket(socket); true } catch (e: Exception) { false }
+    }
+
+    fun release() {
+        try { cm.unregisterNetworkCallback(callback) } catch (_: Exception) {}
+        cellularNetwork = null
+        scope.cancel()
+    }
+
+    fun socketFactoryOrNull(): SocketFactory? = cellularNetwork?.socketFactory
+
+    companion object {
+        private const val TAG = "CellularBinder"
+        private const val INITIAL_TIMEOUT_MS = 10_000L
+    }
+}
+```
+
+---
+
+## service/ProxyForegroundService.kt（前台服务 + 通知 + 启停）
+```kotlin
+package com.example.cellularsocks.service
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.net.InetAddresses
+import android.os.Binder
+import android.os.Build
+import android.os.IBinder
+import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LifecycleService
+import com.example.cellularsocks.MainActivity
+import com.example.cellularsocks.R
+import com.example.cellularsocks.core.Socks5Server
+import com.example.cellularsocks.util.LogBus
+import com.example.cellularsocks.util.NsdHelper
+import kotlinx.coroutines.*
+import java.net.InetAddress
+
+class ProxyForegroundService : LifecycleService() {
+
+    data class Auth(val username: String, val password: String)
+
+    inner class LocalBinder : Binder() { fun getService(): ProxyForegroundService = this@ProxyForegroundService }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private lateinit var binderCell: CellularBinder
+    private var server: Socks5Server? = null
+    private var nsd: NsdHelper? = null
+
+    val statsFlow get() = server?.statsFlow
+
+    override fun onCreate() {
+        super.onCreate()
+        binderCell = CellularBinder(this)
+        // 请求蜂窝并给一个初始超时，避免一直悬挂
+        binderCell.requestCellular(timeoutMs = 10_000)
+        startForeground(NOTIF_ID, buildNotification("准备中"))
+    }
+
+    override fun onBind(intent: Intent): IBinder {
+        super.onBind(intent)
+        return LocalBinder()
+    }
+
+    fun startProxy(ip: String, port: Int, auth: Auth?): Boolean {
+        if (server != null) return true
+        // 预检蜂窝可用性
+        if (!binderCell.isAvailable()) {
+            updateNotification("蜂窝未就绪，稍后重试或检查移动数据")
+            return false
+        }
+        val listen = InetAddresses.parseNumericAddress(ip)
+        val sfProvider = { binderCell.socketFactoryOrNull() }
+        val authCore = auth?.let { Socks5Server.Auth(it.username, it.password) }
+        server = Socks5Server(
+            listen,
+            port,
+            sfProvider,
+            authCore,
+            onState = { msg ->
+                LogBus.post(msg)
+                updateNotification(msg)
+            },
+            maxSessions = 128,
+            allowList = null,
+            denyList = null,
+            authFailThresholdPerMin = 10,
+            tempBlockMinutes = 10,
+            bindDatagramCellular = { socket -> binderCell.bindDatagram(socket) }
+        )
+        scope.launch { server?.serve() }
+        updateNotification("监听 $ip:$port（出口：蜂窝）")
+        // 注册 NSD（便于局域网发现）
+        nsd = NsdHelper(this).also { it.register("CellularSocks", port) }
+        return true
+    }
+
+    fun stopProxy() {
+        server?.shutdown(); server = null
+        nsd?.unregister(); nsd = null
+        updateNotification("已停止")
+    }
+
+    private fun updateNotification(text: String) {
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIF_ID, buildNotification(text))
+    }
+
+    private fun buildNotification(text: String): Notification {
+        val channelId = "proxy"
+        if (Build.VERSION.SDK_INT >= 26) {
+            val ch = NotificationChannel(channelId, getString(R.string.notif_channel), NotificationManager.IMPORTANCE_LOW)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
+        }
+        val intent = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        return NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_stat_proxy)
+            .setContentTitle(getString(R.string.notif_title))
+            .setContentText(text)
+            .setOngoing(true)
+            .setContentIntent(intent)
+            .build()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopProxy()
+        binderCell.release()
+        scope.cancel()
+    }
+
+    companion object { private const val NOTIF_ID = 1 }
+}
+```
+
+---
+
+## core/Socks5Server.kt（监听 Wi‑Fi，外连走蜂窝）
+```kotlin
+package com.example.cellularsocks.core
+
+import kotlinx.coroutines.*
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.SocketException
+import java.util.concurrent.ConcurrentHashMap
+import javax.net.SocketFactory
+import com.example.cellularsocks.util.IpAcl
+
+class Socks5Server(
+    private val listenIp: InetAddress,
+    private val port: Int,
+    private val socketFactoryProvider: () -> SocketFactory?,
+    private val auth: Auth?,
+    private val onState: (String) -> Unit = {},
+    private val maxSessions: Int = 128,
+    private val allowList: List<String>? = null,
+    private val denyList: List<String>? = null,
+    private val authFailThresholdPerMin: Int = 10,
+    private val tempBlockMinutes: Int = 10,
+    private val bindDatagramCellular: ((java.net.DatagramSocket) -> Boolean)? = null
+) {
+    data class Auth(val username: String, val password: String)
+    data class Stats(
+        val activeSessions: Int = 0,
+        val totalSessions: Long = 0,
+        val totalBytes: Long = 0
+    )
+
+    @Volatile private var running = true
+    @Volatile private var serverSocket: ServerSocket? = null
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _statsFlow = kotlinx.coroutines.flow.MutableStateFlow(Stats())
+    val statsFlow: kotlinx.coroutines.flow.StateFlow<Stats> = _statsFlow
+
+    private val failWindow = ConcurrentHashMap<String, MutableList<Long>>()
+    private val tempBlockedUntil = ConcurrentHashMap<String, Long>()
+
+    suspend fun serve() = withContext(Dispatchers.IO) {
+        ServerSocket().use { ss ->
+            serverSocket = ss
+            ss.reuseAddress = true
+            ss.bind(InetSocketAddress(listenIp, port))
+            onState("监听 ${listenIp.hostAddress}:$port")
+            while (running) {
+                val client = try { ss.accept() } catch (e: SocketException) {
+                    if (!running) null else null
+                } ?: continue
+
+                val srcIp = client.inetAddress.hostAddress
+
+                // ACL 检查
+                if (denyList?.let { IpAcl.anyMatch(srcIp, it) } == true ||
+                    (allowList != null && !IpAcl.anyMatch(srcIp, allowList))) {
+                    try { client.close() } catch (_: Exception) {}
+                    onState("拒绝：$srcIp 不满足 ACL")
+                    continue
+                }
+
+                // 临时拉黑检查
+                val now = System.currentTimeMillis()
+                val blocked = tempBlockedUntil[srcIp]?.let { it > now } == true
+                if (blocked) {
+                    try { client.close() } catch (_: Exception) {}
+                    onState("拒绝：$srcIp 处于临时封禁")
+                    continue
+                }
+
+                // 并发上限控制
+                if (_statsFlow.value.activeSessions >= maxSessions) {
+                    try { client.close() } catch (_: Exception) {}
+                    onState("达到最大会话数 $maxSessions，拒绝新连接")
+                    continue
+                }
+
+                scope.launch {
+                    updateStats(activeDelta = +1, sessionDelta = +1, bytesDelta = 0)
+                    val bytes = try {
+                        Socks5Session(
+                            client,
+                            socketFactoryProvider,
+                            auth,
+                            onState,
+                            onAuthFailed = { ip -> recordAuthFail(ip) },
+                            udpStarter = { bndAddr, bndPort ->
+                                val udp = UdpAssociate(bndAddr, onState = onState, bindCellular = bindDatagramCellular)
+                                val portActual = udp.start(bndPort)
+                                bndAddr to portActual
+                            }
+                        ).handle()
+                    } finally {
+                        updateStats(activeDelta = -1, sessionDelta = 0, bytesDelta = 0)
+                    }
+                    val sum = bytes.first + bytes.second
+                    updateStats(activeDelta = 0, sessionDelta = 0, bytesDelta = sum)
+                }
+            }
+        }
+        serverSocket = null
+    }
+
+    private fun recordAuthFail(ip: String) {
+        val now = System.currentTimeMillis()
+        val list = failWindow.computeIfAbsent(ip) { mutableListOf() }
+        list.add(now)
+        // 滑动窗口 60s
+        val cutoff = now - 60_000
+        list.removeIf { it < cutoff }
+        if (list.size >= authFailThresholdPerMin) {
+            tempBlockedUntil[ip] = now + tempBlockMinutes * 60_000L
+            onState("$ip 鉴权失败过多，临时封禁 ${tempBlockMinutes}min")
+            list.clear()
+        }
+    }
+
+    private fun updateStats(activeDelta: Int, sessionDelta: Long, bytesDelta: Long) {
+        val cur = _statsFlow.value
+        _statsFlow.value = cur.copy(
+            activeSessions = (cur.activeSessions + activeDelta).coerceAtLeast(0),
+            totalSessions = cur.totalSessions + sessionDelta,
+            totalBytes = cur.totalBytes + bytesDelta
+        )
+    }
+
+    fun shutdown() {
+        running = false
+        try { serverSocket?.close() } catch (_: Exception) {}
+        scope.cancel()
+    }
+}
+```
+
+---
+
+## core/Socks5Session.kt（支持 USER/PASS + CONNECT）
+```kotlin
+package com.example.cellularsocks.core
+
+import com.example.cellularsocks.core.Socks5Server.Auth
+import com.example.cellularsocks.core.Pump.bridge
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.nio.ByteBuffer
+import javax.net.SocketFactory
+
+class Socks5Session(
+    private val client: Socket,
+    private val socketFactoryProvider: () -> SocketFactory?,
+    private val auth: Auth?,
+    private val onState: (String) -> Unit,
+    private val onAuthFailed: ((String) -> Unit)? = null,
+    private val udpStarter: ((InetAddress, Int) -> Pair<InetAddress, Int>)? = null
+) {
+    suspend fun handle(): Pair<Long, Long> {
+        client.soTimeout = 15_000
+        client.tcpNoDelay = true
+        client.keepAlive = true
+        val inp = client.getInputStream()
+        val out = client.getOutputStream()
+        try {
+            // METHOD NEGOTIATION
+            val ver = inp.read(); if (ver != 0x05) return close()
+            val nMethods = inp.read(); val methods = ByteArray(nMethods).also { inp.read(it) }
+            val needAuth = auth != null
+            val chosen: Byte = when {
+                !needAuth && methods.contains(0x00) -> 0x00 // no auth
+                needAuth && methods.contains(0x02) -> 0x02 // user/pass
+                else -> 0xFF.toByte()
+            }
+            out.write(byteArrayOf(0x05, chosen)); out.flush()
+            if (chosen == 0xFF.toByte()) return close()
+
+            if (chosen == 0x02.toByte()) if (!handleUserPass(inp, out)) {
+                onAuthFailed?.invoke(client.inetAddress.hostAddress ?: "")
+                return close()
+            }
+
+            // REQUEST
+            val req = parseRequest(inp) ?: return close()
+            when (req.cmd) {
+                0x01.toByte() -> { // CONNECT
+                    val sf = socketFactoryProvider() ?: run { reply(out, 0x01); return close() }
+                    val remote = (sf.createSocket() as Socket).apply {
+                        soTimeout = 0
+                        tcpNoDelay = true
+                        keepAlive = true
+                        connect(InetSocketAddress(req.host, req.port), 12_000)
+                    }
+                    replySuccessBound(out, client.localAddress, client.localPort)
+                    onState("转发 ${client.inetAddress.hostAddress} → ${req.host}:${req.port}（蜂窝）")
+                    return bridge(client, remote)
+                }
+                0x03.toByte() -> { // UDP ASSOCIATE
+                    val starter = udpStarter ?: run { reply(out, 0x07); return close() }
+                    val (bndAddr, bndPort) = starter(client.localAddress, 0)
+                    // 回复 BND.ADDR/BND.PORT 给客户端
+                    replySuccessBound(out, bndAddr, bndPort)
+                    onState("UDP 就绪 ${bndAddr.hostAddress}:$bndPort（蜂窝）")
+                    // UDP 模式下，TCP 连接保持但无字节转发
+                    // 直到客户端关闭
+                    while (true) {
+                        val b = try { inp.read() } catch (_: Exception) { -1 }
+                        if (b == -1) break
+                    }
+                    return 0L to 0L
+                }
+                else -> {
+                    reply(out, 0x07) // Command not supported
+                    return close()
+                }
+            }
+        } catch (e: Exception) {
+            onState("会话异常：${e.message}")
+            return 0L to 0L
+        } finally { try { client.close() } catch (_: Exception) {} }
+    }
+
+    private fun handleUserPass(inp: InputStream, out: OutputStream): Boolean {
+        if (inp.read() != 0x01) return false
+        val ulen = inp.read(); val user = ByteArray(ulen).also { inp.read(it) }.toString(Charsets.UTF_8)
+        val plen = inp.read(); val pass = ByteArray(plen).also { inp.read(it) }.toString(Charsets.UTF_8)
+        val ok = (auth?.username == user && auth?.password == pass)
+        out.write(byteArrayOf(0x01, if (ok) 0x00 else 0x01)); out.flush()
+        return ok
+    }
+
+    data class Request(val cmd: Byte, val host: String, val port: Int)
+
+    private fun parseRequest(inp: InputStream): Request? {
+        val header = ByteArray(4)
+        if (inp.read(header) != 4) return null
+        val cmd = header[1]
+        val atyp = header[3]
+        val host = when (atyp.toInt()) {
+            0x01 -> InetAddress.getByAddress(inp.readNBytes(4)).hostAddress
+            0x03 -> { val l = inp.read(); String(inp.readNBytes(l), Charsets.UTF_8) }
+            0x04 -> InetAddress.getByAddress(inp.readNBytes(16)).hostAddress
+            else -> return null
+        }
+        val port = ByteBuffer.wrap(inp.readNBytes(2)).short.toInt() and 0xFFFF
+        return Request(cmd, host, port)
+    }
+
+    private fun reply(out: OutputStream, rep: Int) {
+        out.write(byteArrayOf(0x05, rep.toByte(), 0x00, 0x01, 0,0,0,0, 0,0)); out.flush()
+    }
+
+    private fun replySuccessBound(out: OutputStream, bindAddr: InetAddress, bindPort: Int) {
+        val addr = bindAddr.address
+        val atyp: Byte = if (addr.size == 4) 0x01 else 0x04
+        val portBytes = ByteBuffer.allocate(2).putShort(bindPort.toShort()).array()
+        out.write(byteArrayOf(0x05, 0x00, 0x00, atyp))
+        out.write(addr)
+        out.write(portBytes)
+        out.flush()
+    }
+
+    private fun close(): Pair<Long, Long> { try { client.close() } catch (_: Exception) {}; return 0L to 0L }
+}
+```
+
+---
+
+## core/Pump.kt（双向拷贝 + 收尾）
+```kotlin
+package com.example.cellularsocks.core
+
+import kotlinx.coroutines.*
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.Socket
+
+object Pump {
+    suspend fun bridge(a: Socket, b: Socket): Pair<Long, Long> = coroutineScope {
+        val up = async(Dispatchers.IO) { copyCount(a.getInputStream(), b.getOutputStream()) }
+        val down = async(Dispatchers.IO) { copyCount(b.getInputStream(), a.getOutputStream()) }
+        launch { up.await(); safeClose(b) }
+        launch { down.await(); safeClose(a) }
+        val upBytes = up.await(); val downBytes = down.await()
+        upBytes to downBytes
+    }
+
+    private fun copyCount(inp: InputStream, out: OutputStream): Long {
+        val buf = ByteArray(DEFAULT_BUFFER)
+        var total = 0L
+        while (true) {
+            val n = try { inp.read(buf) } catch (_: Exception) { -1 }
+            if (n <= 0) break
+            try { out.write(buf, 0, n); out.flush() } catch (_: Exception) { break }
+            total += n
+        }
+        return total
+    }
+
+    private fun safeClose(s: Socket) {
+        try { s.shutdownInput() } catch (_: Exception) {}
+        try { s.shutdownOutput() } catch (_: Exception) {}
+        try { s.close() } catch (_: Exception) {}
+    }
+
+    private const val DEFAULT_BUFFER = 64 * 1024
+}
+```
+
+---
+
+## core/UdpAssociate.kt（UDP ASSOCIATE 中继）
+```kotlin
+package com.example.cellularsocks.core
+
+import kotlinx.coroutines.*
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.nio.ByteBuffer
+
+class UdpAssociate(
+    private val bindIp: InetAddress,
+    private val natTimeoutMs: Long = 60_000,
+    private val onState: (String) -> Unit = {},
+    private val bindCellular: ((DatagramSocket) -> Boolean)? = null
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var socket: DatagramSocket? = null
+
+    // NAT: clientAddr -> remoteAddr
+    private val nat = mutableMapOf<InetSocketAddress, InetSocketAddress>()
+    private val lastActive = mutableMapOf<InetSocketAddress, Long>()
+
+    fun start(boundPort: Int): Int {
+        val s = DatagramSocket(null).apply {
+            reuseAddress = true
+            bind(InetSocketAddress(bindIp, if (boundPort > 0) boundPort else 0))
+        }
+        // 绑定到蜂窝网络（使外发走蜂窝）
+        bindCellular?.invoke(s)
+        socket = s
+        scope.launch { pump(s) }
+        scope.launch { gcLoop() }
+        onState("UDP 监听 ${s.localAddress.hostAddress}:${s.localPort}")
+        return s.localPort
+    }
+
+    private suspend fun pump(s: DatagramSocket) = withContext(Dispatchers.IO) {
+        val buf = ByteArray(64 * 1024)
+        val pkt = DatagramPacket(buf, buf.size)
+        while (!s.isClosed) {
+            try {
+                s.receive(pkt)
+                val src = InetSocketAddress(pkt.address, pkt.port)
+                val data = pkt.data.copyOf(pkt.length)
+                // 判断是否来自客户端（带 SOCKS5 UDP 包头）或远端回包（裸数据）
+                if (isSocksUdpHeader(data)) {
+                    val parsed = parseSocksUdp(data) ?: continue
+                    nat[src] = InetSocketAddress(parsed.host, parsed.port)
+                    lastActive[src] = System.currentTimeMillis()
+                    // 转发到远端（裸 UDP）
+                    val out = DatagramPacket(parsed.payload, parsed.payload.size, parsed.host, parsed.port)
+                    s.send(out)
+                } else {
+                    // 视为远端回包，找到对应客户端并回送 SOCKS5 UDP 格式
+                    val client = nat.entries.firstOrNull { it.value.address == pkt.address && it.value.port == pkt.port }?.key
+                    if (client != null) {
+                        val resp = buildSocksUdp(pkt.address, pkt.port, data)
+                        val out = DatagramPacket(resp, resp.size, client.address, client.port)
+                        s.send(out)
+                        lastActive[client] = System.currentTimeMillis()
+                    }
+                }
+            } catch (_: Exception) { /* ignore */ }
+        }
+    }
+
+    private suspend fun gcLoop() {
+        while (true) {
+            delay(natTimeoutMs)
+            val now = System.currentTimeMillis()
+            val it = lastActive.iterator()
+            while (it.hasNext()) {
+                val e = it.next()
+                if (now - e.value > natTimeoutMs) {
+                    nat.remove(e.key)
+                    it.remove()
+                }
+            }
+        }
+    }
+
+    fun stop() {
+        try { socket?.close() } catch (_: Exception) {}
+        scope.cancel()
+        nat.clear(); lastActive.clear()
+    }
+
+    data class UdpPacket(val host: InetAddress, val port: Int, val payload: ByteArray)
+
+    private fun isSocksUdpHeader(data: ByteArray): Boolean = data.size >= 10 && data[2] == 0x00.toByte()
+
+    private fun parseSocksUdp(data: ByteArray): UdpPacket? {
+        // RFC1928 UDP: RSV(2)=0x0000, FRAG(1)=0x00, ATYP(1), DST.ADDR, DST.PORT(2), DATA
+        if (data.size < 10) return null
+        val frag = data[2].toInt()
+        if (frag != 0) return null // 不支持分片
+        val atyp = data[3].toInt()
+        var idx = 4
+        val host = when (atyp) {
+            0x01 -> InetAddress.getByAddress(data.copyOfRange(idx, idx + 4)).also { idx += 4 }
+            0x03 -> {
+                val l = data[idx].toInt() and 0xFF; idx += 1
+                val name = String(data, idx, l, Charsets.UTF_8); idx += l
+                InetAddress.getByName(name)
+            }
+            0x04 -> InetAddress.getByAddress(data.copyOfRange(idx, idx + 16)).also { idx += 16 }
+            else -> return null
+        }
+        val port = ByteBuffer.wrap(data, idx, 2).short.toInt() and 0xFFFF; idx += 2
+        val payload = data.copyOfRange(idx, data.size)
+        return UdpPacket(host, port, payload)
+    }
+
+    private fun buildSocksUdp(host: InetAddress, port: Int, data: ByteArray): ByteArray {
+        val addr = host.address
+        val atyp: Byte = if (addr.size == 4) 0x01 else 0x04
+        val header = ByteBuffer.allocate(4 + addr.size + 2)
+        header.put(0x00).put(0x00).put(0x00).put(atyp)
+        header.put(addr)
+        header.putShort(port.toShort())
+        return header.array() + data
+    }
+}
+```
+
+---
+
+## util/NetUtils.kt（获取 Wi‑Fi IPv4）
+```kotlin
+package com.example.cellularsocks.util
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.LinkAddress
+import android.net.NetworkCapabilities
+import java.net.Inet4Address
+
+object NetUtils {
+    fun wifiIpv4(context: Context): String? {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networks = cm.allNetworks
+        for (n in networks) {
+            val caps = cm.getNetworkCapabilities(n) ?: continue
+            val lp = cm.getLinkProperties(n) ?: continue
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                val ipv4 = lp.linkAddresses.firstOrNull { it.address is Inet4Address }
+                if (ipv4 != null) return (ipv4 as LinkAddress).address.hostAddress
+            }
+        }
+        return null
+    }
+}
+```
+
+---
+
+## util/LogBus.kt（简易日志总线）
+```kotlin
+package com.example.cellularsocks.util
+
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+object LogBus {
+    private val _flow = MutableSharedFlow<String>(extraBufferCapacity = 1024)
+    val flow = _flow.asSharedFlow()
+    fun post(msg: String) { _flow.tryEmit(msg) }
+}
+```
+
+---
+
+## util/Settings.kt（DataStore 持久化设置）
+```kotlin
+package com.example.cellularsocks.util
+
+import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+object SettingsKeys {
+    val PORT = intPreferencesKey("port")
+    val AUTH_ENABLED = booleanPreferencesKey("auth_enabled")
+    val USERNAME = stringPreferencesKey("username")
+    val PASSWORD = stringPreferencesKey("password")
+}
+
+val Context.dataStore by preferencesDataStore(name = "cellularsocks")
+
+data class Settings(
+    val port: Int = 1080,
+    val authEnabled: Boolean = false,
+    val username: String = "",
+    val password: String = ""
+)
+
+object SettingsRepo {
+    fun flow(context: Context): Flow<Settings> = context.dataStore.data.map { p ->
+        Settings(
+            port = p[SettingsKeys.PORT] ?: 1080,
+            authEnabled = p[SettingsKeys.AUTH_ENABLED] ?: false,
+            username = p[SettingsKeys.USERNAME] ?: "",
+            password = p[SettingsKeys.PASSWORD] ?: ""
+        )
+    }
+
+    suspend fun update(context: Context, block: (Settings) -> Settings) {
+        context.dataStore.edit { p ->
+            val cur = Settings(
+                port = p[SettingsKeys.PORT] ?: 1080,
+                authEnabled = p[SettingsKeys.AUTH_ENABLED] ?: false,
+                username = p[SettingsKeys.USERNAME] ?: "",
+                password = p[SettingsKeys.PASSWORD] ?: ""
+            )
+            val n = block(cur)
+            p[SettingsKeys.PORT] = n.port
+            p[SettingsKeys.AUTH_ENABLED] = n.authEnabled
+            p[SettingsKeys.USERNAME] = n.username
+            p[SettingsKeys.PASSWORD] = n.password
+        }
+    }
+}
+```
+
+---
+
+## util/Nsd.kt（NSD/mDNS 广播）
+```kotlin
+package com.example.cellularsocks.util
+
+import android.content.Context
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import android.util.Log
+
+class NsdHelper(private val context: Context) {
+    private val nsd by lazy { context.getSystemService(Context.NSD_SERVICE) as NsdManager }
+    private var registered = false
+    private var listener: NsdManager.RegistrationListener? = null
+
+    fun register(serviceName: String, port: Int) {
+        if (registered) return
+        val serviceInfo = NsdServiceInfo().apply {
+            serviceType = "_cellularsocks._tcp."
+            this.serviceName = serviceName
+            this.port = port
+        }
+        val l = object : NsdManager.RegistrationListener {
+            override fun onServiceRegistered(info: NsdServiceInfo) {
+                registered = true
+                Log.i(TAG, "NSD registered: ${info.serviceName}:${info.port}")
+            }
+            override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                Log.w(TAG, "NSD registration failed: $errorCode")
+            }
+            override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
+                registered = false
+                Log.i(TAG, "NSD unregistered")
+            }
+            override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                Log.w(TAG, "NSD unregistration failed: $errorCode")
+            }
+        }
+        listener = l
+        nsd.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, l)
+    }
+
+    fun unregister() {
+        val l = listener ?: return
+        try { nsd.unregisterService(l) } catch (_: Exception) {}
+        registered = false
+        listener = null
+    }
+
+    companion object { private const val TAG = "NsdHelper" }
+}
+```
+
+---
+
+## util/IpAcl.kt（CIDR 匹配与 ACL 工具）
+```kotlin
+package com.example.cellularsocks.util
+
+import java.net.InetAddress
+
+object IpAcl {
+    fun match(ip: String, cidrOrIp: String): Boolean {
+        return if (cidrOrIp.contains("/")) inCidr(ip, cidrOrIp) else ip == cidrOrIp
+    }
+
+    fun anyMatch(ip: String, list: List<String>?): Boolean {
+        if (list.isNullOrEmpty()) return false
+        return list.any { match(ip, it) }
+    }
+
+    private fun inCidr(ip: String, cidr: String): Boolean {
+        val parts = cidr.split("/")
+        if (parts.size != 2) return false
+        val base = InetAddress.getByName(parts[0]).address
+        val target = InetAddress.getByName(ip).address
+        val prefix = parts[1].toIntOrNull() ?: return false
+        var bits = prefix
+        for (i in base.indices) {
+            val mask = if (bits >= 8) 0xFF else if (bits <= 0) 0 else (0xFF shl (8 - bits)) and 0xFF
+            if ((base[i].toInt() and mask) != (target[i].toInt() and mask)) return false
+            bits -= 8
+            if (bits <= 0) break
+        }
+        return true
+    }
+}
+```
+
+---
+
+## src/test/java/com/example/cellularsocks/core/Socks5SessionTest.kt（单元测试）
+```kotlin
+package com.example.cellularsocks.core
+
+import org.junit.Test
+import org.junit.Assert.*
+import org.mockito.Mockito.*
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.net.InetAddress
+import java.net.Socket
+import javax.net.SocketFactory
+
+class Socks5SessionTest {
+
+    @Test
+    fun `test method negotiation - no auth`() {
+        val mockSocket = mock(Socket::class.java)
+        val input = ByteArrayInputStream(byteArrayOf(0x05, 0x01, 0x00)) // VER=5, NMETHODS=1, METHOD=0
+        val output = ByteArrayOutputStream()
+        `when`(mockSocket.getInputStream()).thenReturn(input)
+        `when`(mockSocket.getOutputStream()).thenReturn(output)
+        `when`(mockSocket.inetAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+
+        val session = Socks5Session(
+            mockSocket,
+            { null },
+            null,
+            { },
+            null,
+            null
+        )
+
+        runBlocking { session.handle() }
+        assertArrayEquals(byteArrayOf(0x05, 0x00), output.toByteArray())
+    }
+
+    @Test
+    fun `test method negotiation - userpass auth`() {
+        val mockSocket = mock(Socket::class.java)
+        val input = ByteArrayInputStream(byteArrayOf(0x05, 0x01, 0x02)) // VER=5, NMETHODS=1, METHOD=2
+        val output = ByteArrayOutputStream()
+        `when`(mockSocket.getInputStream()).thenReturn(input)
+        `when`(mockSocket.getOutputStream()).thenReturn(output)
+        `when`(mockSocket.inetAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+
+        val session = Socks5Session(
+            mockSocket,
+            { null },
+            Socks5Server.Auth("user", "pass"),
+            { },
+            null,
+            null
+        )
+
+        runBlocking { session.handle() }
+        assertArrayEquals(byteArrayOf(0x05, 0x02), output.toByteArray())
+    }
+
+    @Test
+    fun `test userpass authentication - success`() {
+        val mockSocket = mock(Socket::class.java)
+        val input = ByteArrayInputStream(byteArrayOf(
+            0x05, 0x01, 0x02, // method negotiation
+            0x01, 0x04, 0x75, 0x73, 0x65, 0x72, 0x04, 0x70, 0x61, 0x73, 0x73 // auth: user/pass
+        ))
+        val output = ByteArrayOutputStream()
+        `when`(mockSocket.getInputStream()).thenReturn(input)
+        `when`(mockSocket.getOutputStream()).thenReturn(output)
+        `when`(mockSocket.inetAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+
+        val session = Socks5Session(
+            mockSocket,
+            { null },
+            Socks5Server.Auth("user", "pass"),
+            { },
+            null,
+            null
+        )
+
+        runBlocking { session.handle() }
+        val response = output.toByteArray()
+        assertArrayEquals(byteArrayOf(0x05, 0x02, 0x01, 0x00), response.take(4).toByteArray())
+    }
+
+    @Test
+    fun `test userpass authentication - failure`() {
+        val mockSocket = mock(Socket::class.java)
+        val input = ByteArrayInputStream(byteArrayOf(
+            0x05, 0x01, 0x02, // method negotiation
+            0x01, 0x04, 0x75, 0x73, 0x65, 0x72, 0x04, 0x77, 0x72, 0x6f, 0x6e, 0x67 // auth: user/wrong
+        ))
+        val output = ByteArrayOutputStream()
+        `when`(mockSocket.getInputStream()).thenReturn(input)
+        `when`(mockSocket.getOutputStream()).thenReturn(output)
+        `when`(mockSocket.inetAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+
+        val session = Socks5Session(
+            mockSocket,
+            { null },
+            Socks5Server.Auth("user", "pass"),
+            { },
+            null,
+            null
+        )
+
+        runBlocking { session.handle() }
+        val response = output.toByteArray()
+        assertArrayEquals(byteArrayOf(0x05, 0x02, 0x01, 0x01), response.take(4).toByteArray())
+    }
+
+    @Test
+    fun `test parse request - IPv4 connect`() {
+        val mockSocket = mock(Socket::class.java)
+        val input = ByteArrayInputStream(byteArrayOf(
+            0x05, 0x01, 0x00, // method negotiation
+            0x05, 0x01, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x04, 0x38 // CONNECT 127.0.0.1:1080
+        ))
+        val output = ByteArrayOutputStream()
+        `when`(mockSocket.getInputStream()).thenReturn(input)
+        `when`(mockSocket.getOutputStream()).thenReturn(output)
+        `when`(mockSocket.inetAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+        `when`(mockSocket.localAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+
+        val mockFactory = mock(SocketFactory::class.java)
+        val mockRemoteSocket = mock(Socket::class.java)
+        `when`(mockFactory.createSocket()).thenReturn(mockRemoteSocket)
+
+        val session = Socks5Session(
+            mockSocket,
+            { mockFactory },
+            null,
+            { },
+            null,
+            null
+        )
+
+        runBlocking { session.handle() }
+        val response = output.toByteArray()
+        assertArrayEquals(byteArrayOf(0x05, 0x00, 0x00, 0x01), response.take(4).toByteArray())
+    }
+
+    @Test
+    fun `test parse request - domain connect`() {
+        val mockSocket = mock(Socket::class.java)
+        val input = ByteArrayInputStream(byteArrayOf(
+            0x05, 0x01, 0x00, // method negotiation
+            0x05, 0x01, 0x00, 0x03, 0x09, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x68, 0x6f, 0x73, 0x74, 0x04, 0x38 // CONNECT localhost:1080
+        ))
+        val output = ByteArrayOutputStream()
+        `when`(mockSocket.getInputStream()).thenReturn(input)
+        `when`(mockSocket.getOutputStream()).thenReturn(output)
+        `when`(mockSocket.inetAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+        `when`(mockSocket.localAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+
+        val mockFactory = mock(SocketFactory::class.java)
+        val mockRemoteSocket = mock(Socket::class.java)
+        `when`(mockFactory.createSocket()).thenReturn(mockRemoteSocket)
+
+        val session = Socks5Session(
+            mockSocket,
+            { mockFactory },
+            null,
+            { },
+            null,
+            null
+        )
+
+        runBlocking { session.handle() }
+        val response = output.toByteArray()
+        assertArrayEquals(byteArrayOf(0x05, 0x00, 0x00, 0x01), response.take(4).toByteArray())
+    }
+
+    @Test
+    fun `test unsupported command`() {
+        val mockSocket = mock(Socket::class.java)
+        val input = ByteArrayInputStream(byteArrayOf(
+            0x05, 0x01, 0x00, // method negotiation
+            0x05, 0x02, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x04, 0x38 // BIND 127.0.0.1:1080
+        ))
+        val output = ByteArrayOutputStream()
+        `when`(mockSocket.getInputStream()).thenReturn(input)
+        `when`(mockSocket.getOutputStream()).thenReturn(output)
+        `when`(mockSocket.inetAddress).thenReturn(InetAddress.getByName("127.0.0.1"))
+
+        val session = Socks5Session(
+            mockSocket,
+            { null },
+            null,
+            { },
+            null,
+            null
+        )
+
+        runBlocking { session.handle() }
+        val response = output.toByteArray()
+        assertArrayEquals(byteArrayOf(0x05, 0x07, 0x00, 0x01), response.take(4).toByteArray())
+    }
+}
+```
+
+---
+
+## src/test/java/com/example/cellularsocks/util/IpAclTest.kt（单元测试）
+```kotlin
+package com.example.cellularsocks.util
+
+import org.junit.Test
+import org.junit.Assert.*
+
+class IpAclTest {
+
+    @Test
+    fun `test exact IP match`() {
+        assertTrue(IpAcl.match("192.168.1.100", "192.168.1.100"))
+        assertFalse(IpAcl.match("192.168.1.100", "192.168.1.101"))
+    }
+
+    @Test
+    fun `test CIDR match - /24`() {
+        assertTrue(IpAcl.match("192.168.1.100", "192.168.1.0/24"))
+        assertTrue(IpAcl.match("192.168.1.255", "192.168.1.0/24"))
+        assertFalse(IpAcl.match("192.168.2.100", "192.168.1.0/24"))
+    }
+
+    @Test
+    fun `test CIDR match - /16`() {
+        assertTrue(IpAcl.match("192.168.1.100", "192.168.0.0/16"))
+        assertTrue(IpAcl.match("192.168.255.100", "192.168.0.0/16"))
+        assertFalse(IpAcl.match("192.169.1.100", "192.168.0.0/16"))
+    }
+
+    @Test
+    fun `test CIDR match - /32`() {
+        assertTrue(IpAcl.match("192.168.1.100", "192.168.1.100/32"))
+        assertFalse(IpAcl.match("192.168.1.101", "192.168.1.100/32"))
+    }
+
+    @Test
+    fun `test anyMatch - empty list`() {
+        assertFalse(IpAcl.anyMatch("192.168.1.100", null))
+        assertFalse(IpAcl.anyMatch("192.168.1.100", emptyList()))
+    }
+
+    @Test
+    fun `test anyMatch - single item`() {
+        val list = listOf("192.168.1.0/24")
+        assertTrue(IpAcl.anyMatch("192.168.1.100", list))
+        assertFalse(IpAcl.anyMatch("192.168.2.100", list))
+    }
+
+    @Test
+    fun `test anyMatch - multiple items`() {
+        val list = listOf("192.168.1.0/24", "10.0.0.0/8")
+        assertTrue(IpAcl.anyMatch("192.168.1.100", list))
+        assertTrue(IpAcl.anyMatch("10.0.0.1", list))
+        assertFalse(IpAcl.anyMatch("172.16.0.1", list))
+    }
+}
+```
+
+---
+
+## 提示与校验清单
+- 在**开发者选项**打开：*移动数据始终保持活动*（不同机型名称可能不同）；
+- 启动前确保：手机连接 Wi‑Fi 且蜂窝数据已打开（状态栏同时显示）；
+- 首版仅实现 **CONNECT**，UDP 暂不支持；
+- UI 设置鉴权后，客户端需填写相同的 USER/PASS；
+- 若运营商为纯 IPv6，推荐让客户端用域名发起连接；
+- 在极端省电策略机型上，请将应用加入后台白名单。
+
+---
+
+## GitHub Actions（可选，放在仓库根） `.github/workflows/android.yml`
+```yaml
+name: Android CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      
+      - name: Run tests
+        run: ./gradlew test
+      
+      - name: Run lint
+        run: ./gradlew lintDebug
+      
+      - name: Build
+        run: ./gradlew assembleRelease
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: app/build/outputs/apk/release/*.apk
+```
+
+---
+
+## 使用步骤（MVP 流程）
+1) 运行 App → 授权通知；
+2) 确认首页显示的 Wi‑Fi IP；
+3) 设置端口、（可选）账号密码 → 点击【启动代理】；
+4) 局域网设备设置 SOCKS5 代理：手机 Wi‑Fi IP + 端口；
+5) 观察日志：应出现 `转发 ... （蜂窝）`，并在断网/拔 WAN 时仍可通过手机移动网访问外网。
+
+---
+
+## 版权与许可
+建议使用 **Apache-2.0** 或 **MIT** 许可证。
+
+---
+
+### 下一步可选增强
+- UDP ASSOCIATE（`DatagramSocket` 绑定 `cellularNetwork`）
+- 接入 NSD/mDNS 广播（让局域网设备自动发现服务）
+- 连接限速、并发上限、IP 访问控制
+- Channel/NIO 重构以提升吞吐
+
+## gradle/wrapper/gradle-wrapper.properties
+```properties
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+```
+
