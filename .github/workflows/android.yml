@@ -6,46 +6,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          java-version: '17'
+          distribution: 'temurin'
       
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
       
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       
-      - name: Setup Gradle wrapper
+      - name: Build with Gradle
         run: |
-          # Create gradle wrapper if missing
+          # Create gradle wrapper jar if missing
           if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Gradle wrapper jar not found, downloading..."
+            echo "Downloading gradle-wrapper.jar..."
             mkdir -p gradle/wrapper
-            curl -L https://services.gradle.org/distributions/gradle-8.5-bin.zip -o gradle-8.5-bin.zip
-            unzip gradle-8.5-bin.zip
-            cp gradle-8.5/lib/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
-            rm -rf gradle-8.5 gradle-8.5-bin.zip
+            wget -O gradle/wrapper/gradle-wrapper.jar "https://downloads.gradle.org/distributions/gradle-8.5-bin.zip" 2>/dev/null || curl -L -o gradle/wrapper/gradle-wrapper.jar "https://repo.gradle.org/gradle/libs-releases/org/gradle/gradle-wrapper/8.5/gradle-wrapper-8.5.jar"
           fi
-      
-      - name: Run tests
-        run: ./gradlew test
-      
-      - name: Run lint
-        run: ./gradlew lintDebug
+          ./gradlew build --stacktrace
       
       - name: Build Debug APK
+        run: ./gradlew assembleDebug
+      
+      - name: Check APK output
         run: |
-          ./gradlew assembleDebug
           ls -la app/build/outputs/apk/debug/
+          ls -la app/build/outputs/apk/
+          ls -la app/build/outputs/
+          ls -la app/build/
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
