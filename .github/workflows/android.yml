@@ -19,10 +19,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Setup Gradle Wrapper
+        run: |
+          # Create gradle wrapper jar if missing
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            mkdir -p gradle/wrapper
+            curl -L -o gradle/wrapper/gradle-wrapper.jar "https://repo.gradle.org/gradle/libs-releases/org/gradle/gradle-wrapper/8.5/gradle-wrapper-8.5.jar"
+          fi
+          ls -la gradle/wrapper/
+
       - name: Build Debug APK
         run: |
           ./gradlew assembleDebug --stacktrace
           ls -la app/build/outputs/apk/debug/
+          ls -la app/build/outputs/apk/
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
