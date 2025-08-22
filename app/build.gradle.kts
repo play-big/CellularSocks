@@ -18,6 +18,21 @@ android {
     buildFeatures { compose = true }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
 
+    buildTypes {
+        getByName("debug") {
+            isMinifyEnabled = false
+            isDebuggable = true
+        }
+        getByName("release") {
+            isMinifyEnabled = true
+            isDebuggable = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
     packaging {
         resources.excludes.add("META-INF/{AL2.0,LGPL2.1}")
     }
@@ -44,4 +59,4 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-} 
+}
