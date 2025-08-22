@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">CellularSocks</string>
+    <string name="notif_channel">Cellular Proxy</string>
+    <string name="notif_title">Cellular SOCKS</string>
+</resources> 
